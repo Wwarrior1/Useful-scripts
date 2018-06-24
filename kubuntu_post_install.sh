@@ -95,9 +95,7 @@ help_message() {
 _EOF_
   return
 }
-
 # ---------------------------
-
 
 # --- Handle different types of exit ---
 error_exit() {
@@ -124,16 +122,16 @@ signal_exit() { # Handle trapped signals
 }
 # ---------------------------
 
-# Trap signals
+# --- Trap signals ---
 # trap "signal_exit TERM" TERM HUP
 # trap "signal_exit INT"  INT
 
-# Check for root UID
+# --- Check for root UID ---
 if [[ $(id -u) == 0 ]]; then
   error_exit "You cannot be the superuser to run this script."
 fi
 
-# Check K/Ubuntu version
+# --- Check K/Ubuntu version ---
 UBUNTU_NAME=`cat /etc/issue | head -n 1 | awk '{print $1}'`
 UBUNTU_VER=`cat /etc/issue | head -n 1 | awk '{print $2}' | awk -F. '{print $1}'`
 
@@ -144,8 +142,9 @@ fi
 if [ "$((UBUNTU_VER))" -lt "16" ]; then
   error_exit "You must have (K)Ubuntu 16+"
 fi
+# ---------------------------
 
-# Parse command-line
+# --- Parse command-line ---
 while [[ -n $1 ]]; do
   case $1 in
     -h | --help)
@@ -171,70 +170,81 @@ ppa_install() {
     else
         echo " ++ '$the_ppa' already exists..."
     fi
+    
+    sudo apt update
 }
 
 # + ------------------ +
 # |     Main logic     |
 # + ------------------ +
 
-# --- General preparation ---
 sout_header "PREPARATION"
 sudo apt update
 echo "- - - - - - - - - - - - - - - - - - -"
-yes | sudo apt install software-properties-common python-software-properties # --- If 'add-apt-repository' is missing ---
+yes | sudo apt install software-properties-common python-software-properties # for add-apt-repository
 yes | sudo apt install curl git
-
-sout_header "REPOSITORIES"
-# --- Add needed repositories ---
-ppa_install "danielrichter2007/grub-customizer"
-ppa_install "videolan/stable-daily"
-ppa_install "webupd8team/java"
-ppa_install "ubuntu-desktop/ubuntu-make"
-ppa_install "cwchien/gradle"
-ppa_install "hvr/ghc"
 echo "- - - - - - - - - - - - - - - - - - -"
-sudo apt update
 
-sout_header "INSTALLATION"
 
-sout "Thunderbird"
-yes | sudo apt install thunderbird
+sout_header "INSTALLATION_-_Utils"
+
+sout "Tools_1_(netstat_net-tools_tree_where_whereis_locate)"
+yes | sudo apt install netstat net-tools tree where whereis locate
+
+sout "Tools_2_(htop_cpu-checker_screenfetch)"
+yes | sudo apt install htop cpu-checker screenfetch
+
+sout "VIM_(extended_mode)"
+yes | sudo apt install vim
+
+sout "TLP_(Advanced_Power_Management)"
+yes | sudo apt install tlp 
 
 sout "Grub_customizer"
+ppa_install "danielrichter2007/grub-customizer"
 yes | sudo apt install grub-customizer
-
-sout "GParted"
-yes | sudo apt install gparted
-
-sout "VLC"
-yes | sudo apt install vlc
-
-sout "Audacity_+_Lame"
-yes | sudo apt install audacity libmp3lame0
-
-sout "MusicBrainz_Picard"
-yes | sudo apt install picard
 
 sout "PulseAudio_Volume_Control"
 yes | sudo apt install pavucontrol
 
-sout "Synaptic_Package_Manager"
-yes | sudo apt install synaptic
+sout "GParted"
+yes | sudo apt install gparted
 
-sout "Yakuake"
-yes | sudo apt install yakuake
+#sout "Synaptic_Package_Manager"
+#yes | sudo apt install synaptic
+
+sout "Bleachbit_(cleaner)"
+yes | sudo apt install bleachbit
 
 sout "CPU_frequency_indicator"
 yes | sudo apt install indicator-cpufreq
 
-sout "Maven"
-yes | sudo apt install maven
+echo "- - - - - - - - - - - - - - - - - - -"
 
-sout "Gradle"
-yes | sudo apt install gradle
 
-sout "NodeJS_+_Npm"
-yes | sudo apt install nodejs npm
+sout_header "INSTALLATION_-_Apps"
+
+sout "Firefox_Developer_Edition"
+ppa_install "ubuntu-mozilla-daily/firefox-aurora"
+yes | sudo apt install firefox
+# using umake
+# ( echo pl ) | umake web firefox-dev $SOFTWARE_PATH/web/firefox-dev
+
+sout "Thunderbird"
+ppa_install "mozillateam/thunderbird-next"      # Thunderbird Beta
+yes | sudo apt install thunderbird
+
+sout "Yakuake"
+yes | sudo apt install yakuake
+
+sout "Latte_Dock"
+yes | sudo apt install latte-dock
+
+sout "Gimp"
+yes | sudo apt install gimp
+
+sout "Filezilla"
+yes | sudo apt install filezilla
 
 sout "Chrome"
 the_ppa="http://dl.google.com/linux/chrome/deb/"
@@ -259,57 +269,110 @@ else
 fi
 yes | sudo apt install skypeforlinux
 
+# sout "VLC"
+# ppa_install "videolan/stable-daily"
+# yes | sudo apt install vlc
+
+sout "Audacity_+_Lame"
+yes | sudo apt install audacity libmp3lame0
+
+sout "MusicBrainz_Picard"
+yes | sudo apt install picard
+
+echo "- - - - - - - - - - - - - - - - - - -"
+
+
+sout_header "INSTALLATION_-_Programming_tools"
+
+sout "Docker"
+sudo apt install apt-transport-https ca-certificates curl software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo apt-key fingerprint 0EBFCD88
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+yes | sudo apt install docker-ce
+
+sout "Maven"
+yes | sudo apt install maven
+
+sout "Gradle"
+ppa_install "cwchien/gradle"
+yes | sudo apt install gradle
+
 sout "Java_8"
+ppa_install "webupd8team/java"
 echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections
 yes | sudo apt install oracle-java8-installer
 yes | sudo update-java-alternatives -s java-8-oracle
 yes | sudo apt install oracle-java8-set-default
 echo '*** Oracle Java 8 set as default JDK ***'
 
-sout "Ubuntu_Make"
-yes | sudo apt install ubuntu-make
-
-sout "Firefox_Developer_Edition"
-( echo pl ) | umake web firefox-dev $SOFTWARE_PATH/web/firefox-dev
-
 sout "Atom"
-echo | umake ide atom $SOFTWARE_PATH/atom
-#sout "Atom"
-#yes | sudo apt install atom
+curl -L https://packagecloud.io/AtomEditor/atom/gpgkey | sudo apt-key add -
+sudo sh -c 'echo "deb [arch=amd64] https://packagecloud.io/AtomEditor/atom/any/ any main" > /etc/apt/sources.list.d/atom.list'
+sudo apt update
+yes | sudo apt install atom
+# umake
+# echo | umake ide atom $SOFTWARE_PATH/atom
 
 sout "NodeJS"
-echo | umake nodejs nodejs-lang $SOFTWARE_PATH/nodejs/nodejs-lang
+curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+yes | sudo apt install nodejs
+# umake
+# echo | umake nodejs nodejs-lang $SOFTWARE_PATH/nodejs/nodejs-lang
+
+sout "Visual_Studio_Code"
+curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
+sudo mv microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg
+sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list'
+sudo apt update
+yes | sudo apt install code
+# umake
+# echo | umake ide visual-studio-code $SOFTWARE_PATH/ide/visual-studio-code --accept-license
 
 sout "Android_Studio"
-echo | umake android android-studio $SOFTWARE_PATH/android/android-studio --accept-license
+ppa_install "maarten-fonville/android-studio"
+yes | sudo apt install android-studio
+# umake
+# echo | umake android android-studio $SOFTWARE_PATH/android/android-studio --accept-license
 
-sout "Android_SDK"
-echo | umake android android-sdk $SOFTWARE_PATH/android/android-sdk --accept-license
+# sout "Ubuntu_Make"
+# ppa_install "ubuntu-desktop/ubuntu-make"
+# yes | sudo apt install ubuntu-make
 
-sout "Visual_studio_code"
-echo | umake ide visual-studio-code $SOFTWARE_PATH/ide/visual-studio-code --accept-license
+# sout "Android_SDK"
+# echo | umake android android-sdk $SOFTWARE_PATH/android/android-sdk --accept-license
 
-sout "Haskell_+_Cabal_+_Stack"
-CABAL=`sudo apt-cache search "^cabal-install-[0-9]+.[0-9]*$" --names-only | sort -r | head -n 1 | awk '{print $1;}' `
-GHC=`sudo apt-cache search "^ghc-[0-9]+.[0-9]*.[0-9]*$" --names-only | sort -r | head -n 1 | awk '{print $1;}' `
-CABAL_VER=`$CABAL | awk -F- '{print $3}'`
-GHC_VER=`$GHC | awk -F- '{print $2}'`
-yes | sudo apt install $CABAL $GHC haskell-stack
-cat >> ~/.bashrc <<EOF
-export PATH="\$HOME/.cabal/bin:/opt/cabal/\$CABAL_VER/bin:/opt/ghc/\$GHC_VER/bin:\$PATH"
-EOF
-export PATH=~/.cabal/bin:/opt/cabal/\$CABAL_VER/bin:/opt/ghc/\$GHC_VER/bin:$PATH
+# sout "Haskell_+_Cabal_+_Stack"
+# ppa_install "hvr/ghc"
+# CABAL=`sudo apt-cache search "^cabal-install-[0-9]+.[0-9]*$" --names-only | sort -r | head -n 1 | awk '{print $1;}' `
+# GHC=`sudo apt-cache search "^ghc-[0-9]+.[0-9]*.[0-9]*$" --names-only | sort -r | head -n 1 | awk '{print $1;}' `
+# CABAL_VER=`$CABAL | awk -F- '{print $3}'`
+# GHC_VER=`$GHC | awk -F- '{print $2}'`
+# yes | sudo apt install $CABAL $GHC haskell-stack
+# cat >> ~/.bashrc <<EOF
+# export PATH="\$HOME/.cabal/bin:/opt/cabal/\$CABAL_VER/bin:/opt/ghc/\$GHC_VER/bin:\$PATH"
+# EOF
+# export PATH=~/.cabal/bin:/opt/cabal/\$CABAL_VER/bin:/opt/ghc/\$GHC_VER/bin:$PATH
 
 sout "ZSH_+_Oh-My-ZSH"
 yes | sudo apt install zsh
 sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
 
-sout_HEADER "UPDATE_+_UPGRADE_+_CLEANUP"
-yes | sudo apt update
+sout "---_BACKPORTS_---"
+ppa_install "kubuntu-ppa/backports"
+
 echo "- - - - - - - - - - - - - - - - - - -"
-yes | sudo apt upgrade
+
+
+sout_header "UPDATE_+_UPGRADE_+_CLEANUP"
+#yes | sudo apt update
+#echo "- - - - - - - - - - - - - - - - - - -"
+yes | sudo apt full-upgrade
 echo "- - - - - - - - - - - - - - - - - - -"
 yes | sudo apt autoremove
+
+echo "- - - - - - - - - - - - - - - - - - -"
+
 
 sout_header "OTHER"
 echo -e "\e[1m Please install manually: \e[0m"
@@ -319,6 +382,10 @@ echo -e "   Apache Tomcat (\e[31m http://tomcat.apache.org/whichversion.html \e[
 echo -e "   Slack (\e[31m https://slack.com/downloads/linux \e[0m)"
 echo -e "   Telegram (\e[31m https://desktop.telegram.org/ \e[0m)"
 echo -e "   VMware Workstation (\e[31m http://www.vmware.com/products/workstation-for-linux.html \e[0m)"
+echo -e "   FreeFileSync (\e[31m https://www.freefilesync.org/download.php \e[0m)"
 echo ""
+
+echo "- - - - - - - - - - - - - - - - - - -"
+
 
 graceful_exit
