@@ -1,8 +1,8 @@
 #!/bin/bash
-# ---------------------------------------------------------------------------
-# kubuntu_post_install.sh - Installation of dev environment on Kubuntu 16+
+# ----------------------------------------------------------------------
+# kubuntu_post_install.sh - Installation of dev environment on (K)Ubuntu
 # Usage: kubuntu_post_install.sh [-h|--help] [-p|--path path]
-# ---------------------------------------------------------------------------
+# ----------------------------------------------------------------------
 # Using MIT license
 #
 # Copyright 2017 Wwarrior
@@ -22,146 +22,65 @@
 # IN THE SOFTWARE.
 # ---------------------------------------------------------------------------
 # Revision history:
-# 2017-04-17 Created ver 1.0
+# 2017-06-24 v1.2 minor update
+# 2018-05-06 v1.1 big update
+# 2017-04-17 v1.0 initial
 # ---------------------------------------------------------------------------
 
+# --- MAIN VARIABLES ---
 PROGNAME=${0##*/}
 VERSION="1.0"
+INSTALLATION_PATH=/opt
 
-# MAIN VARIABLES
-SOFTWARE_PATH=/opt
-
-# --- Creating log ---
+# --- CREATING LOG ---
 exec > >(tee -i kubuntu_post_install.log)
 exec 2>&1
 
-# --- Printing on terminal ---
-sout() {
-  echo -e "\e[92m"
-  echo -n "+ -------------"
-  echo_n_times $1
-  echo " +"
-  echo    "| Installing - "\'$1\'" |"
-  echo -n "+ -------------"
-  echo_n_times $1
-  echo -e " +\e[0m"
-  
-#  echo -e -n "\e[2m + Press to continue...\e[0m"; read -p ""    # COMMENT IT - TO AUTOMATICALLY RUN SCRIPT ----
+# --- PRINTING ON TERMINAL ---
+sout() { 
+ sout_core '-' $1
 }
-
 sout_header() {
-  echo -e "\e[92m\e[1m"
-  echo -n "+ "
-  echo_n_times_header $1
-  echo " +"
-  echo    "| "\'$1\'" |"
-  echo -n "+ "
-  echo_n_times_header $1
-  echo -e " +\e[0m"
-  
-#  echo -e -n "\e[2m + Press to continue...\e[0m"; read -p ""    # COMMENT IT - TO AUTOMATICALLY RUN SCRIPT ----
+ sout_core '=' $1
 }
 
+sout_core() {
+  echo -e "\e[92m"; echo_n_times $1 $2; echo -e "\n"$2; echo_n_times $1 $2; echo -e "\e[0m"
+  # echo -e -n "\e[2m + Press to continue...\e[0m"; read -p ""    # COMMENT IT - TO AUTOMATICALLY RUN SCRIPT ----
+}
 echo_n_times() {
- len=$((${#1}+2))
- v=$(printf "%-${len}s" "-")
- echo -n "${v// /-}"
-}
-
-echo_n_times_header() {
- len=$((${#1}+2))
- v=$(printf "%-${len}s" "=")
- echo -n "${v// /=}"
+ name="${@:2}"
+ printf "%0.s$1" $( seq 1 ${#name} )
 }
 
 usage() {
-  echo -e "Usage: $PROGNAME [-h|--help] [-u] [-p|--path path]"
+ echo -e "Usage: $PROGNAME [-h|--help] [-p|--path path]" 
 }
 
 help_message() {
   cat <<- _EOF_
   $PROGNAME ver. $VERSION
-  Installation of dev environment on Kubuntu
+  Installation of dev environment on (K)ubuntu
 
   $(usage)
 
   Options:
   -h, --help  Display this help message and exit.
-  -p, --path SOFTWARE_PATH  specify path where software will be installed
-    Where 'SOFTWARE_PATH' is the absolute path to a root software directory.
+  -p, --path INSTALLATION_PATH  specify absolute path where the software will be installed
 
-  NOTE: You must be the superuser to run this script.
-
+  NOTE: You cannot be the superuser to run this script.
 _EOF_
-  return
+return
 }
-# ---------------------------
 
-# --- Handle different types of exit ---
+# --- HANDLING EXIT ---
 error_exit() {
   echo -e "${PROGNAME}: ${1:-"Unknown Error"}" >&2
-  return    # pre-exit housekeeping
-  exit 1
+  return; exit 1
 }
-
-graceful_exit() {
-  return    # pre-exit housekeeping
-  exit
+successful_exit() {
+  return; exit
 }
-
-signal_exit() { # Handle trapped signals
-  case $1 in
-    INT)
-      error_exit "Program interrupted by user" ;;
-    TERM)
-      echo -e "\n$PROGNAME: Program terminated" >&2
-      graceful_exit ;;
-    *)
-      error_exit "$PROGNAME: Terminating on unknown signal" ;;
-  esac
-}
-# ---------------------------
-
-# --- Trap signals ---
-# trap "signal_exit TERM" TERM HUP
-# trap "signal_exit INT"  INT
-
-# --- Check for root UID ---
-if [[ $(id -u) == 0 ]]; then
-  error_exit "You cannot be the superuser to run this script."
-fi
-
-# --- Check K/Ubuntu version ---
-UBUNTU_NAME=`cat /etc/issue | head -n 1 | awk '{print $1}'`
-UBUNTU_VER=`cat /etc/issue | head -n 1 | awk '{print $2}' | awk -F. '{print $1}'`
-
-if [ "$UBUNTU_NAME" != "Ubuntu" ]; then
-  echo "Your system is not Ubuntu! Script was not tested on other systems yet."
-fi
-
-if [ "$((UBUNTU_VER))" -lt "16" ]; then
-  error_exit "You must have (K)Ubuntu 16+"
-fi
-# ---------------------------
-
-# --- Parse command-line ---
-while [[ -n $1 ]]; do
-  case $1 in
-    -h | --help)
-      help_message; graceful_exit ;;
-    -p | --path)
-      echo "Setting absolute path for software root directory"; shift; SOFTWARE_PATH=$1;
-      if [[ ! -d "$SOFTWARE_PATH" ]]; then
-        sudo mkdir $SOFTWARE_PATH
-      fi ;;
-    -* | --*)
-      usage
-      error_exit "Unknown option $1" ;;
-    *)
-      echo "Argument $1 to process..." ;;
-  esac
-  shift
-done
 
 ppa_install() {
     the_ppa=$1
@@ -174,8 +93,42 @@ ppa_install() {
     sudo apt update
 }
 
+# + -------------------- +
+# |     MAIN PROGRAM     |
+# + -------------------- +
+
+# --- CHECK FOR ROOT UID ---
+if [[ $(id -u) == 0 ]]; then
+  error_exit "You cannot be the superuser to run this script."
+fi
+
+# --- CHECK (K)UBUNTU VERSION ---
+UBUNTU_NAME=`cat /etc/issue | head -n 1 | awk '{print $1}'`
+if [ "$UBUNTU_NAME" != "Ubuntu" ]; then
+  echo "Your system is not from Ubuntu family! Script was not tested on other systems yet."
+fi
+
+# --- PARSE COMMAND-LINE ---
+while [[ -n $1 ]]; do
+  case $1 in
+    -h | --help)
+      help_message; successful_exit ;;
+    -p | --path)
+      echo "Setting absolute path for software root directory"; shift; INSTALLATION_PATH=$1;
+      if [[ ! -d "$INSTALLATION_PATH" ]]; then
+        sudo mkdir $INSTALLATION_PATH
+      fi ;;
+    -* | --*)
+      usage
+      error_exit "Unknown option $1" ;;
+    *)
+      echo "Argument $1 to process..." ;;
+  esac
+  shift
+done
+
 # + ------------------ +
-# |     Main logic     |
+# |     MAIN LOGIC     |
 # + ------------------ +
 
 sout_header "PREPARATION"
@@ -186,49 +139,49 @@ yes | sudo apt install curl git
 echo "- - - - - - - - - - - - - - - - - - -"
 
 
-sout_header "INSTALLATION_-_Utils"
+sout_header "INSTALLATION - Utils"
 
-sout "Tools_1_(netstat_net-tools_tree_where_whereis_locate)"
+sout "Tools 1 (netstat net-tools tree where whereis locate)"
 yes | sudo apt install netstat net-tools tree where whereis locate
 
-sout "Tools_2_(htop_cpu-checker_screenfetch)"
+sout "Tools 2 (htop cpu-checker screenfetch)"
 yes | sudo apt install htop cpu-checker screenfetch
 
-sout "VIM_(extended_mode)"
+sout "VIM (with extended mode)"
 yes | sudo apt install vim
 
-sout "TLP_(Advanced_Power_Management)"
+sout "TLP (Advanced Power Management)"
 yes | sudo apt install tlp 
 
-sout "Grub_customizer"
+sout "Grub customizer"
 ppa_install "danielrichter2007/grub-customizer"
 yes | sudo apt install grub-customizer
 
-sout "PulseAudio_Volume_Control"
+sout "PulseAudio Volume Control"
 yes | sudo apt install pavucontrol
 
 sout "GParted"
 yes | sudo apt install gparted
 
-#sout "Synaptic_Package_Manager"
+#sout "Synaptic Package Manager"
 #yes | sudo apt install synaptic
 
-sout "Bleachbit_(cleaner)"
+sout "Bleachbit (cleaner)"
 yes | sudo apt install bleachbit
 
-sout "CPU_frequency_indicator"
+sout "CPU frequency indicator"
 yes | sudo apt install indicator-cpufreq
 
 echo "- - - - - - - - - - - - - - - - - - -"
 
 
-sout_header "INSTALLATION_-_Apps"
+sout_header "INSTALLATION - Apps"
 
-sout "Firefox_Developer_Edition"
+sout "Firefox Developer Edition"
 ppa_install "ubuntu-mozilla-daily/firefox-aurora"
 yes | sudo apt install firefox
 # using umake
-# ( echo pl ) | umake web firefox-dev $SOFTWARE_PATH/web/firefox-dev
+# ( echo pl ) | umake web firefox-dev $INSTALLATION_PATH/web/firefox-dev
 
 sout "Thunderbird"
 ppa_install "mozillateam/thunderbird-next"      # Thunderbird Beta
@@ -237,10 +190,11 @@ yes | sudo apt install thunderbird
 sout "Yakuake"
 yes | sudo apt install yakuake
 
-sout "Latte_Dock"
+sout "Latte Dock"
 yes | sudo apt install latte-dock
 
 sout "Gimp"
+ppa_install "otto-kesselgulasch/gimp"
 yes | sudo apt install gimp
 
 sout "Filezilla"
@@ -256,6 +210,9 @@ else
     echo " ++ '$the_ppa' already exists..."
 fi
 yes | sudo apt install google-chrome-stable
+
+sout "Slack"
+sudo snap install slack --classic
 
 sout "Skype"
 the_ppa="https://repo.skype.com/deb"
@@ -273,16 +230,16 @@ yes | sudo apt install skypeforlinux
 # ppa_install "videolan/stable-daily"
 # yes | sudo apt install vlc
 
-sout "Audacity_+_Lame"
+sout "Audacity + Lame"
 yes | sudo apt install audacity libmp3lame0
 
-sout "MusicBrainz_Picard"
+sout "MusicBrainz Picard"
 yes | sudo apt install picard
 
 echo "- - - - - - - - - - - - - - - - - - -"
 
 
-sout_header "INSTALLATION_-_Programming_tools"
+sout_header "INSTALLATION - Programming tools"
 
 sout "Docker"
 sudo apt install apt-transport-https ca-certificates curl software-properties-common
@@ -298,7 +255,7 @@ sout "Gradle"
 ppa_install "cwchien/gradle"
 yes | sudo apt install gradle
 
-sout "Java_8"
+sout "Java 8"
 ppa_install "webupd8team/java"
 echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections
 yes | sudo apt install oracle-java8-installer
@@ -312,59 +269,47 @@ sudo sh -c 'echo "deb [arch=amd64] https://packagecloud.io/AtomEditor/atom/any/ 
 sudo apt update
 yes | sudo apt install atom
 # umake
-# echo | umake ide atom $SOFTWARE_PATH/atom
+# echo | umake ide atom $INSTALLATION_PATH/atom
 
 sout "NodeJS"
 curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
 yes | sudo apt install nodejs
 # umake
-# echo | umake nodejs nodejs-lang $SOFTWARE_PATH/nodejs/nodejs-lang
+# echo | umake nodejs nodejs-lang $INSTALLATION_PATH/nodejs/nodejs-lang
 
-sout "Visual_Studio_Code"
+sout "Visual Studio Code"
 curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
 sudo mv microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg
 sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list'
 sudo apt update
 yes | sudo apt install code
 # umake
-# echo | umake ide visual-studio-code $SOFTWARE_PATH/ide/visual-studio-code --accept-license
+# echo | umake ide visual-studio-code $INSTALLATION_PATH/ide/visual-studio-code --accept-license
 
-sout "Android_Studio"
+sout "Android Studio"
 ppa_install "maarten-fonville/android-studio"
 yes | sudo apt install android-studio
 # umake
-# echo | umake android android-studio $SOFTWARE_PATH/android/android-studio --accept-license
+# echo | umake android android-studio $INSTALLATION_PATH/android/android-studio --accept-license
 
-# sout "Ubuntu_Make"
+# sout "Ubuntu Make"
 # ppa_install "ubuntu-desktop/ubuntu-make"
 # yes | sudo apt install ubuntu-make
 
-# sout "Android_SDK"
-# echo | umake android android-sdk $SOFTWARE_PATH/android/android-sdk --accept-license
+# sout "Android SDK"
+# echo | umake android android-sdk $INSTALLATION_PATH/android/android-sdk --accept-license
 
-# sout "Haskell_+_Cabal_+_Stack"
-# ppa_install "hvr/ghc"
-# CABAL=`sudo apt-cache search "^cabal-install-[0-9]+.[0-9]*$" --names-only | sort -r | head -n 1 | awk '{print $1;}' `
-# GHC=`sudo apt-cache search "^ghc-[0-9]+.[0-9]*.[0-9]*$" --names-only | sort -r | head -n 1 | awk '{print $1;}' `
-# CABAL_VER=`$CABAL | awk -F- '{print $3}'`
-# GHC_VER=`$GHC | awk -F- '{print $2}'`
-# yes | sudo apt install $CABAL $GHC haskell-stack
-# cat >> ~/.bashrc <<EOF
-# export PATH="\$HOME/.cabal/bin:/opt/cabal/\$CABAL_VER/bin:/opt/ghc/\$GHC_VER/bin:\$PATH"
-# EOF
-# export PATH=~/.cabal/bin:/opt/cabal/\$CABAL_VER/bin:/opt/ghc/\$GHC_VER/bin:$PATH
-
-sout "ZSH_+_Oh-My-ZSH"
+sout "ZSH + Oh-My-ZSH"
 yes | sudo apt install zsh
 sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
 
-sout "---_BACKPORTS_---"
+sout "--- BACKPORTS ---"
 ppa_install "kubuntu-ppa/backports"
 
 echo "- - - - - - - - - - - - - - - - - - -"
 
 
-sout_header "UPDATE_+_UPGRADE_+_CLEANUP"
+sout_header "UPDATE + UPGRADE + CLEANUP"
 #yes | sudo apt update
 #echo "- - - - - - - - - - - - - - - - - - -"
 yes | sudo apt full-upgrade
@@ -376,16 +321,15 @@ echo "- - - - - - - - - - - - - - - - - - -"
 
 sout_header "OTHER"
 echo -e "\e[1m Please install manually: \e[0m"
+echo -e "   Telegram (\e[31m https://desktop.telegram.org/ \e[0m)"
+echo -e "   VMware Workstation (\e[31m http://www.vmware.com/products/workstation-for-linux.html \e[0m)"
 echo -e "   Anaconda (\e[31m https://www.continuum.io/downloads \e[0m)"
 echo -e "   Scala / SBT (\e[31m https://www.scala-lang.org/download/ \e[0m)"
 echo -e "   Apache Tomcat (\e[31m http://tomcat.apache.org/whichversion.html \e[0m)"
-echo -e "   Slack (\e[31m https://slack.com/downloads/linux \e[0m)"
-echo -e "   Telegram (\e[31m https://desktop.telegram.org/ \e[0m)"
-echo -e "   VMware Workstation (\e[31m http://www.vmware.com/products/workstation-for-linux.html \e[0m)"
 echo -e "   FreeFileSync (\e[31m https://www.freefilesync.org/download.php \e[0m)"
 echo ""
 
 echo "- - - - - - - - - - - - - - - - - - -"
 
 
-graceful_exit
+successful_exit
